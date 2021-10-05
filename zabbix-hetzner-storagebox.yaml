@@ -1,0 +1,45 @@
+zabbix_export:
+  version: '5.2'
+  date: '2021-10-05T18:00:00Z'
+  templates:
+    -
+      template: 'Hetzner Storage Boxes'
+      name: 'Hetzner Storage Boxes'
+      applications:
+        -
+          name: 'Hetzner Storage Box'
+      discovery_rules:
+        -
+          name: 'Hetzner Storage Box Discovery'
+          type: ZABBIX_ACTIVE
+          key: hetzner-storagebox-discovery
+          delay: 60m
+          lifetime: 90d
+          item_prototypes:
+            -
+              name: 'Storage Box [{#NAME} - {#ID}]'
+              type: ZABBIX_ACTIVE
+              key: 'hetzner-storagebox-info[{#ID}]'
+              delay: 5m
+              value_type: FLOAT
+              units: '%'
+              applications:
+                -
+                  name: 'Hetzner Storage Box'
+              trigger_prototypes:
+                -
+                  expression: '{last()} > 80.00'
+                  recovery_mode: RECOVERY_EXPRESSION
+                  recovery_expression: '{last()} < 80.00'
+                  name: 'Storage Box Quota [{#NAME}] - [{#ID}]'
+                  priority: WARNING
+          graph_prototypes:
+            -
+              name: 'Storage Quota on {#NAME} - {#ID}'
+              graph_items:
+                -
+                  sortorder: '1'
+                  color: 199C0D
+                  item:
+                    host: 'Hetzner Storage Boxes'
+                    key: 'hetzner-storagebox-info[{#ID}]'
