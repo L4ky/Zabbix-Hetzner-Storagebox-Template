@@ -5,6 +5,7 @@ This is a Zabbix template used for monitoring used space on Hetzner Storage Box.
 The python script uses Hetzner's Web Services to get all data needed. You can get your webservice account on hetzner.com.
 
 It automatically finds all active storageboxes and calculate the used space percentage.
+The script has also a trigger which sends you a WARNING notification in case one of the storageboxes exceed 80% used space.
 
 ## Warning
 Hetzner web services have limits on how many requests you can do in a certain period of time. Please check their docs before choosing how often Zabbix should update his data.
