@@ -13,9 +13,10 @@ __version__ = '1.0'
 __maintainer__ = 'Luca Salvestrini'
 __email__ = 'laky1694@gmail.com'
 
-def validate_robot_ws(user, password):
+def validate_robot_ws(api_token):
     try:
-        req = requests.get('https://robot-ws.your-server.de/storagebox', auth=(user, password))
+        headers = {"Authorization": "Bearer " + api_token}    
+        req = requests.get('https://api.hetzner.com/v1/storage_boxes', headers=headers)
         req.raise_for_status()
     except requests.exceptions.HTTPError as err:
         print('ERROR. More info: {}'.format(err))
@@ -23,29 +24,31 @@ def validate_robot_ws(user, password):
     return True
 
 
-def get_all_storage_box(user, password):
+def get_all_storage_box(api_token):
     try:
-        req = requests.get('https://robot-ws.your-server.de/storagebox/', auth=(user, password))
+        headers = {"Authorization": "Bearer " + api_token}
+        req = requests.get('https://api.hetzner.com/v1/storage_boxes', headers=headers)
         req.raise_for_status()
     except requests.exceptions.HTTPError:
         print('ERROR. Can\'t find any storage box')
     data = list()
-    for item in req.json():
-        if item and item["storagebox"]:
-            if(item["storagebox"]["cancelled"] == False):
-                data.append({"{#ID}": item["storagebox"]["id"], "{#LOGIN}": item["storagebox"]["login"],
-                            "{#NAME}": item["storagebox"]["name"], "{#PRODUCT}": item["storagebox"]["product"]})
+    response_json = req.json()['storage_boxes']
+    for item in response_json:
+        if item and item["status"] == 'active':
+                data.append({"{#ID}": item["id"], "{#LOGIN}": item["username"],
+                            "{#NAME}": item["name"], "{#PRODUCT}": item["storage_box_type"]["description"]})
     return json.dumps({"data": data}, indent=4)
 
-def get_storage_box_info(storage_box, user, password):
+def get_storage_box_info(storage_box, api_token):
     try:
-        req = requests.get('https://robot-ws.your-server.de/storagebox/' + storage_box, auth=(user, password))
+        headers = {"Authorization": "Bearer " + api_token}
+        req = requests.get('https://api.hetzner.com/v1/storage_boxes/' + str(storage_box), headers=headers)
         req.raise_for_status()
     except requests.exceptions.HTTPError:
         print('UNKNOWN - Can\'t find storage box (#{})'.format(storage_box))
     res = req.json()
-    if(res["storagebox"] and res["storagebox"]["disk_quota"] and res["storagebox"]["disk_usage"]):
-        percentage = '{0:.2f}'.format(100*(res["storagebox"]["disk_usage"] / res["storagebox"]["disk_quota"]))
+    if(res["storage_box"] and res["storage_box"]["stats"]["size_data"] and res["storage_box"]["storage_box_type"]["size"]):
+        percentage = '{0:.2f}'.format(100*(res["storage_box"]["stats"]["size_data"] / res["storage_box"]["storage_box_type"]["size"]))
         return percentage
     return False
 
@@ -63,18 +66,13 @@ def main(args):
         help='Enter the Storage Box ID.',
     )
     parser.add_argument(
-        '-u',
-        '--user',
+        '-t',
+        '--token',
+        dest='api_token',
         type=str,
-        help='Enter the Hetzner Webservice username.',
+        help='Enter the Hetzner API Token.',
     )
-    parser.add_argument(
-        '-p',
-        '--password',
-        type=str,
-        help='Enter the Hetzner Webservice password.',
-    )
-
+    
     parser.add_argument(
         '-d',
         '--discovery',
@@ -92,14 +90,14 @@ def main(args):
     )
 
     args = parser.parse_args()
-    if args.user and args.password and validate_robot_ws(args.user,
-                                              args.password):
+    
+    if args.api_token and validate_robot_ws(args.api_token):
         allStorageBoxes = list()
         if(args.discovery):
-            allStorageBoxes = get_all_storage_box(args.user, args.password)
+            allStorageBoxes = get_all_storage_box(args.api_token)
             print(allStorageBoxes)
         if(args.info):
-            res = get_storage_box_info(args.info, args.user, args.password)
+            res = get_storage_box_info(args.info, args.api_token)
             print(res)
             print("\n\n\n")
             exit()
